@@ -9,9 +9,7 @@ export default function ChatSidebar({
 }) {
   return (
     <div className="sidebar-container">
-
         <div className="sidebar-header">
-
             <button
                 type="button"
                 className="sidebar-new-btn"
@@ -20,15 +18,13 @@ export default function ChatSidebar({
                 + New chat
             </button>
         </div>
-
       {conversations.length === 0 ? (
         <p className="sidebar-empty">No conversations yet</p>
-      ) : (
+        ) : (
         <ul className="sidebar-list">
           {conversations.map((c) => {
             const id = c.id;
             const title = c.lastMessagePreview || c.title || `Conversation ${id}`;
-
             return (
               <li
                 key={id}

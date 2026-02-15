@@ -4,15 +4,13 @@ import { useNavigate } from "react-router-dom";
 
 function HomePage({ Username }) {
   const navigate = useNavigate();
-
  // Handle logout (clears token and returns to Login page)
    const handleLogout = () => {
        // Clear authentication token
      localStorage.removeItem("token");
      navigate("/login", { replace: true });
    };
-
-  return (
+   return (
     <div className="card" style={{ textAlign: "center" }}>
       <h1>Welcome to Spring-bloom</h1>
       <p>{Username ? `Hello, ${Username}!` : "You are logged in."}</p>
@@ -39,5 +37,4 @@ function HomePage({ Username }) {
     </div>
   );
 }
-
 export default HomePage;

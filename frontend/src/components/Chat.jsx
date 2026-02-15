@@ -1,12 +1,64 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import "./Chat.css";
 import { useNavigate } from "react-router-dom";
+import SectionSidebar from "./SectionSidebar";
+import SectionContent from "./SectionContent";
 import ChatSidebar from "./ChatSidebar";
 
 export default function Chat() {
   const navigate = useNavigate();
+// ===== TEMP STEP 1 STATES (UI ONLY) =====
+const [sections] = useState([
+  { id: "22222222-0001-0000-0000-000000000001", title: "Week 1 - Java Fundamentals" },
+  { id: "22222222-0002-0000-0000-000000000002", title: "Week 2 - OOP in Java" },
+  { id: "22222222-0003-0000-0000-000000000003", title: "Week 3 - Collections Framework" },
+]);
+
+const [activeSectionId, setActiveSectionId] = useState(null);
+const [sectionContent, setSectionContent] = useState(
+  "### Select a section to see lecture notes"
+);
+
+const handleSelectSection = (sectionId) => {
+  if (!sectionId) return;
+
+  setActiveSectionId(sectionId);
+  setSectionContent("Loading...");
+  loadSectionContent(sectionId);
+};
+
+const loadSectionContent = async (sectionId) => {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+const courseId = "11111111-1111-1111-1111-111111111111";
+
+  try {
+    const res = await fetch(
+      `http://localhost:8080/api/courses/${courseId}/sections/${sectionId}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      setSectionContent("## Failed to load lecture notes");
+      return;
+    }
+
+    const data = await res.json();
+    const raw = data.lectureNotes || data.content || "";
+    const markdown = raw.replace(/\\n/g, "\n");
+    setSectionContent(markdown || "## No lecture notes yet");
+  } catch (e) {
+    setSectionContent("## Network error while loading lecture notes");
+  }
+};
 
   // сообщения в правой части
   const [messages, setMessages] = useState([]);
@@ -18,37 +70,42 @@ export default function Chat() {
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
 
-  // при открытии страницы грузим список диалогов
-  useEffect(() => {
-    loadConversations();
-  }, []);
+ const loadConversations = useCallback(async () => {
+   const token = localStorage.getItem("token");
+   if (!token || !activeSectionId) return;
 
-  async function loadConversations() {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+   try {
+     const res = await fetch(
+       `http://localhost:8080/api/chat/conversations?sectionId=${activeSectionId}`,
+       {
+         headers: {
+           "Content-Type": "application/json",
+           Authorization: `Bearer ${token}`,
+         },
+       }
+     );
 
-    try {
-      const res = await fetch(
-        "http://localhost:8080/api/chat/conversations",
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+     if (!res.ok) {
+       console.error("Failed to load conversations list", res.status);
+       return;
+     }
 
-      if (!res.ok) {
-        console.error("Failed to load conversations list", res.status);
-        return;
-      }
+     const data = await res.json();
+     setConversations(data || []);
 
-      const data = await res.json();
-      setConversations(data || []);
-    } catch (e) {
-      console.error("Error loading conversations list", e);
-    }
-  }
+     // если чатов нет — сбрасываем активный чат
+     if (!data || data.length === 0) {
+       setActiveConversationId(null);
+       setMessages([]);
+     }
+   } catch (e) {
+     console.error("Error loading conversations list", e);
+   }
+ }, [activeSectionId]);
+
+ useEffect(() => {
+   loadConversations();
+ }, [loadConversations]);
 
   // клик по существующему диалогу в сайдбаре
   const handleSelectConversation = async (id) => {
@@ -95,25 +152,56 @@ export default function Chat() {
     setMessages([]);
   };
 
-  // отправка сообщения
+  // HandleSend
   const handleSend = async (e) => {
     e.preventDefault();
+
+    // 1) empty input guard
     if (!prompt.trim()) return;
 
+    // 2) section must be selected BEFORE adding user message
+    if (!activeSectionId) {
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now(), role: "ai", text: "Please select a section first." },
+      ]);
+      return;
+    }
+
+    // 3) add user message only when section is selected
     const userMsg = { id: Date.now(), role: "user", text: prompt.trim() };
     setMessages((prev) => [...prev, userMsg]);
     setPrompt("");
     setLoading(true);
 
     try {
+      // 4) auth guard
       const token = localStorage.getItem("token");
       if (!token) {
         setMessages((prev) => [
           ...prev,
           { id: Date.now() + 1, role: "ai", text: "Please login first." },
         ]);
+        setLoading(false);
         return;
       }
+
+      // 5) (your existing logic below stays the same)
+      const sectionTitle =
+        sections.find((s) => s.id === activeSectionId)?.title || "Selected section";
+
+      const hasUsefulNotes =
+        sectionContent &&
+        !sectionContent.includes("Select a section") &&
+        !sectionContent.includes("Loading") &&
+        !sectionContent.includes("Failed") &&
+        !sectionContent.includes("No lecture notes");
+
+      const notesForPrompt = hasUsefulNotes ? sectionContent : "";
+
+      const messageToSend = notesForPrompt
+        ? `You are my tutor. We are working on this section: "${sectionTitle}".\n\nLecture notes:\n${notesForPrompt}\n\nUser question:\n${userMsg.text}`
+        : `You are my tutor. We are working on this section: "${sectionTitle}".\n\nUser question:\n${userMsg.text}`;
 
       const response = await fetch(
         "http://localhost:8080/api/chat/message",
@@ -124,8 +212,9 @@ export default function Chat() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            message: userMsg.text,
-            conversationId: activeConversationId, // либо новый, либо существующий диалог
+            message: messageToSend,
+            conversationId: activeConversationId,
+            sectionId: activeSectionId,
           }),
         }
       );
@@ -133,7 +222,7 @@ export default function Chat() {
       if (response.ok) {
         const data = await response.json();
 
-        // если это был самый первый месседж – сохранить conversationId
+        // если это был самый первый месседж, сохранить conversationId
         if (!activeConversationId && data.conversationId) {
           setActiveConversationId(data.conversationId);
         }
@@ -187,33 +276,20 @@ export default function Chat() {
   };
 
   return (
-    <div style={{ display: "flex" }}>
-      {/* ЛЕВЫЙ САЙДБАР */}
-      <ChatSidebar
-        conversations={conversations}
-        activeConversationId={activeConversationId}
-        onSelectConversation={handleSelectConversation}
-        onNewConversation={handleNewConversation}
-      />
+    <div className="tutor-layout">
+      {/* LEFT: sections */}
+      <div className="panel left">
+        <SectionSidebar
+          sections={sections}
+          activeSectionId={activeSectionId}
+          onSelectSection={handleSelectSection}
+        />
+      </div>
 
-      {/* ПРАВАЯ ЧАСТЬ — твой старый дизайн */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          height: "100vh",        // фиксируем высоту экрана
-          paddingTop: "40px",    // чуть отступ сверху для хедера
-          backgroundColor: "#f8f6f3",
-          boxSizing: "border-box",
-          overflow: "hidden",     // запрещаем прокрутку всей правой части
-        }}
-      >
-        {/* Header */}
-        <header className="chat-header">
-          <h2>Spring Bloom Project</h2>
+      {/* CENTER: lecture markdown */}
+      <div className="panel center">
+        <header className="topbar">
+          <div className="title">Spring Bloom Project</div>
           <button
             className="logout-btn"
             onClick={() => {
@@ -224,42 +300,58 @@ export default function Chat() {
             Logout
           </button>
         </header>
+        <SectionContent content={sectionContent} />
+      </div>
 
-        <h2
-          style={{
-            textAlign: "center",
-            color: "#3a2f2f",
-            fontWeight: "600",
-            fontSize: "25px",
-            marginBottom: "15px",
-            marginTop: "15px",
-            letterSpacing: "0.8px",
-            fontFamily: "Avenir, 'Helvetica Neue', sans-serif",
-          }}
-        >
-          AI Assistant
-        </h2>
+      {/* CONVERSATIONS PANEL */}
+      <div className="panel conversations-panel">
+        <div style={{ padding: "12px", fontWeight: 600 }}>Conversations</div>
+        <ChatSidebar
+                  conversations={conversations}
+                  activeConversationId={activeConversationId}
+                  onSelectConversation={handleSelectConversation}
+                  onNewConversation={handleNewConversation}
+                />
+      </div>
+
+      {/* RIGHT: chat */}
+      <div className="panel right">
+        <h2 className="chat-title">AI Assistant</h2>
 
         <div className="chat-container">
           <div className="messages-container">
-            {messages.map((msg, i) => (
-              <div key={i} className={`message ${msg.role}`}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {msg.text}
-                </ReactMarkdown>
+            {messages.length === 0 && (
+              <div className="empty-chat">
+                Select a section and ask your first question 👇
               </div>
-            ))}
+            )}
+            {messages
+              .filter(msg => {
+                const t = (msg.text || "").trimStart();
+                return !(
+                  t.startsWith("You are my tutor.") ||
+                  (t.includes("Lecture notes:") && t.includes("User question:"))
+                );
+              })
+              .map((msg, i) => (
+                <div key={i} className={`message ${msg.role}`}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.text}
+                  </ReactMarkdown>
+                </div>
+              ))}
             <div ref={scrollRef} />
           </div>
+
           <form className="input-row" onSubmit={handleSend}>
             <input
               type="text"
               placeholder="Type your question about this section..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              disabled={loading}
+              disabled={loading || !activeSectionId}
             />
-            <button type="submit" disabled={loading}>
+            <button type="submit" disabled={loading || !activeSectionId || !prompt.trim()}>
               {loading ? "..." : "Send"}
             </button>
           </form>
