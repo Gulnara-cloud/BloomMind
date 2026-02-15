@@ -20,5 +20,7 @@ public class ConversationListDto {
     private LocalDateTime updatedAt;
 
     private String lastMessagePreview;   // optional
-    private Integer messageCount;        // optional
+
+    private Integer messageCount;      // optional
+    private UUID sectionId;
 }

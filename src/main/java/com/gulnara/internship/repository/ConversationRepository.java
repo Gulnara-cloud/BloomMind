@@ -13,4 +13,6 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
 
     // Validate ownership: find conversation by id & user id
     Optional<Conversation> findByIdAndUserId(UUID id, UUID userId);
+
+    List<Conversation> findByUserIdAndSectionIdOrderByUpdatedAtDesc(UUID userId, UUID sectionId);
 }

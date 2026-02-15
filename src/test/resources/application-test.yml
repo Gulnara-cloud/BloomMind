@@ -29,3 +29,7 @@ openai:
 internproject:
   security:
     enabled: false
+
+    spring:
+      flyway:
+        enabled: false

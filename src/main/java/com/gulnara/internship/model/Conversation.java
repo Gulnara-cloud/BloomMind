@@ -26,6 +26,10 @@ public class Conversation {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "section_id")
+    private Section section;
+
     @OneToMany(mappedBy = "conversation",
             cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference

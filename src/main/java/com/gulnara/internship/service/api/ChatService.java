@@ -21,4 +21,6 @@ public interface ChatService {
 
     // Optional delete (conversation + messages)
     void deleteConversation(UUID userId, UUID conversationId);
+
+    List<ConversationListDto> getConversations(UUID userId, UUID sectionId);
 }

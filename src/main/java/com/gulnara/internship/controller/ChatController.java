@@ -45,14 +45,18 @@ public class ChatController {
         // Return response with conversation context
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/conversations")
-    public ResponseEntity<List<ConversationListDto>> getConversations() {
-
+    public ResponseEntity<List<ConversationListDto>> getConversations(
+            @RequestParam(required = false) UUID sectionId
+    ) {
         String username = SecurityUtil.getAuthenticatedUsername();
-        System.out.println("USERNAME FROM SECURITY CONTEXT = " + username);
-
         UUID userId = userService.getUserIdByUsername(username);
-        List<ConversationListDto> conversations = chatService.getConversations(userId);
+
+        List<ConversationListDto> conversations = (sectionId == null)
+                ? chatService.getConversations(userId)
+                : chatService.getConversations(userId, sectionId);
+
         return ResponseEntity.ok(conversations);
     }
 

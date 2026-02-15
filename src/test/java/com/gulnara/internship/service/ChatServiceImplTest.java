@@ -4,12 +4,10 @@ import com.gulnara.internship.dto.ChatRequestDto;
 import com.gulnara.internship.dto.ChatResponseDto;
 import com.gulnara.internship.dto.ConversationDetailDto;
 import com.gulnara.internship.dto.ConversationListDto;
-import com.gulnara.internship.model.Conversation;
-import com.gulnara.internship.model.Message;
-import com.gulnara.internship.model.MessageRole;
-import com.gulnara.internship.model.User;
+import com.gulnara.internship.model.*;
 import com.gulnara.internship.repository.ConversationRepository;
 import com.gulnara.internship.repository.MessageRepository;
+import com.gulnara.internship.repository.SectionRepository;
 import com.gulnara.internship.repository.UserRepository;
 import com.gulnara.internship.service.api.MemoryService;
 import com.gulnara.internship.service.impl.ChatServiceImpl;
@@ -30,30 +28,34 @@ import static org.mockito.Mockito.*;
 class ChatServiceImplTest {
 
     @Mock private ConversationRepository conversationRepository;
-
     @Mock private MessageRepository messageRepository;
-
     @Mock private UserRepository userRepository;
-
     @Mock private OpenAiClientService openAiClientService;
-
     @Mock private MemoryService memoryService;
-
     @InjectMocks private ChatServiceImpl chatService;
+    @Mock private SectionRepository sectionRepository;
 
     // 1) processChat – NEW CONVERSATION
     @Test
     void testProcessChat_newConversation_success() {
         UUID userId = UUID.randomUUID();
+        UUID sectionId = UUID.randomUUID();
 
         ChatRequestDto request = new ChatRequestDto();
         request.setMessage("Hello");
         request.setModelName("gpt-mini");
         request.setConversationId(null);
+        request.setSectionId(sectionId);
 
         // user
         User user = new User();
         user.setId(userId);
+
+        Section section = new Section();
+        section.setId(sectionId);
+
+        when(sectionRepository.findById(sectionId))
+                .thenReturn(Optional.of(section));
 
         // new conversation that will be returned by repository
         Conversation newConv = Conversation.builder()
@@ -61,6 +63,7 @@ class ChatServiceImplTest {
                 .title("New chat")
                 .modelName("gpt-mini")
                 .user(user)
+                .section(section)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -132,14 +135,20 @@ class ChatServiceImplTest {
         request.setModelName("gpt-mini");
         request.setConversationId(convId);
 
+        UUID sectionId = UUID.randomUUID();
+        request.setSectionId(sectionId);
+
         User user = new User();
         user.setId(userId);
+        Section section = new Section();
+        section.setId(sectionId);
 
         Conversation conv = Conversation.builder()
                 .id(convId)
                 .title("Chat 1")
                 .modelName("gpt-mini")
                 .user(user)
+                .section(section)
                 .createdAt(LocalDateTime.now().minusMinutes(5))
                 .updatedAt(LocalDateTime.now().minusMinutes(1))
                 .build();
@@ -161,6 +170,10 @@ class ChatServiceImplTest {
                 .build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        when(sectionRepository.findById(sectionId))
+                .thenReturn(Optional.of(section));
+
         when(conversationRepository.findByIdAndUserId(convId, userId))
                 .thenReturn(Optional.of(conv));
 
@@ -208,19 +221,24 @@ class ChatServiceImplTest {
         verify(messageRepository, never()).save(any());
     }
 
-    // 4) getConversations()
+    // 4) getConversations(userId, sectionId)
     @Test
     void testGetConversations_success() {
         UUID userId = UUID.randomUUID();
+        UUID sectionId = UUID.randomUUID();
 
         User user = new User();
         user.setId(userId);
+
+        Section section = new Section();
+        section.setId(sectionId);
 
         Conversation conv = Conversation.builder()
                 .id(UUID.randomUUID())
                 .title("Chat 1")
                 .modelName("gpt-mini")
                 .user(user)
+                .section(section) // <-- ВАЖНО
                 .createdAt(LocalDateTime.now().minusMinutes(10))
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -234,18 +252,20 @@ class ChatServiceImplTest {
                 .build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(conversationRepository.findByUserIdOrderByUpdatedAtDesc(userId))
+
+        when(conversationRepository.findByUserIdAndSectionIdOrderByUpdatedAtDesc(userId, sectionId))
                 .thenReturn(List.of(conv));
 
         when(messageRepository.findByConversationIdOrderByCreatedAtAsc(conv.getId()))
                 .thenReturn(List.of(lastMsg));
 
-        List<ConversationListDto> list = chatService.getConversations(userId);
+        List<ConversationListDto> list = chatService.getConversations(userId, sectionId);
 
         assertEquals(1, list.size());
         assertEquals("Chat 1", list.get(0).getTitle());
 
-        verify(conversationRepository).findByUserIdOrderByUpdatedAtDesc(userId);
+        verify(conversationRepository).findByUserIdAndSectionIdOrderByUpdatedAtDesc(userId, sectionId);
+
         verify(messageRepository, times(2))
                 .findByConversationIdOrderByCreatedAtAsc(conv.getId());
     }

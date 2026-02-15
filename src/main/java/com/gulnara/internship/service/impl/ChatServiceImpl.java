@@ -1,11 +1,9 @@
 package com.gulnara.internship.service.impl;
 
 import com.gulnara.internship.dto.*;
+import com.gulnara.internship.model.*;
+import com.gulnara.internship.repository.SectionRepository;
 import com.gulnara.internship.service.api.MemoryService;
-import com.gulnara.internship.model.Conversation;
-import com.gulnara.internship.model.Message;
-import com.gulnara.internship.model.MessageRole;
-import com.gulnara.internship.model.User;
 import com.gulnara.internship.repository.ConversationRepository;
 import com.gulnara.internship.repository.MessageRepository;
 import com.gulnara.internship.repository.UserRepository;
@@ -28,12 +26,16 @@ public class ChatServiceImpl implements ChatService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final OpenAiClientService openAiClientService;
+    private final SectionRepository sectionRepository;
+
 
     @Override
     public ChatResponseDto processChat(UUID userId, ChatRequestDto request) {
         // A) User & Conversation
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        Section section = sectionRepository.findById(request.getSectionId())
+                .orElseThrow(() -> new RuntimeException("Section not found"));
         Conversation conversation;
 
         // Check if conversation ID provided
@@ -43,6 +45,7 @@ public class ChatServiceImpl implements ChatService {
                     .title("New chat")
                     .modelName(request.getModelName())
                     .user(user)
+                    .section(section)
                     .build();
             conversation = conversationRepository.save(conversation);
 
@@ -138,6 +141,30 @@ public class ChatServiceImpl implements ChatService {
                 )
                 .toList();
     }
+    @Override
+    public List<ConversationListDto> getConversations(UUID userId, UUID sectionId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Conversation> conversations =
+                conversationRepository.findByUserIdAndSectionIdOrderByUpdatedAtDesc(userId, sectionId);
+
+        return conversations.stream()
+                .map(conv -> ConversationListDto.builder()
+                        .id(conv.getId())
+                        .title(conv.getTitle())
+                        .modelName(conv.getModelName())
+                        .createdAt(conv.getCreatedAt())
+                        .updatedAt(conv.getUpdatedAt())
+                        .lastMessagePreview(getLastMessagePreview(conv.getId()))
+                        .messageCount(getMessageCount(conv.getId()))
+                        .sectionId(conv.getSection().getId())
+                        .build()
+                )
+                .toList();
+    }
+
     private String getLastMessagePreview(UUID conversationId) {
         List<Message> messages = messageRepository
                 .findByConversationIdOrderByCreatedAtAsc(conversationId);

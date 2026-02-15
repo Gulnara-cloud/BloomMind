@@ -17,6 +17,7 @@ import java.util.UUID;
 public class ChatRequestDto {
 
     private UUID conversationId;   // optional
+    private UUID sectionId;        // required (for context)
     private String modelName;      // optional
     private String message;        // required
 }
