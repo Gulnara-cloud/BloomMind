@@ -1,10 +1,10 @@
 .sidebar-container {
   width: 200px;
   min-width: 280px;
-  background: #f8f6f3;
+  background: #ffffff;
   border-right: 0px solid #ddd;
-  padding: 20px;
-  padding-top: 160px;
+  padding: 10px;
+  padding-top: 10px;
   height: 100vh;
   overflow-y: auto;
   box-sizing: border-box;
@@ -22,7 +22,7 @@
 .sidebar-list {
   list-style: none;
   padding: 0;
-  margin: 8;
+  margin: 15;
 }
 .sidebar-item {
   padding: 8px;
@@ -45,14 +45,14 @@
 .sidebar-new-btn {
   width: 100%;
   padding: 10px 15px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 
   border: none;
   border-radius: 990px;            /* таблетки-формы */
   background-color: #b9d8e8;       /* как верхний баннер Spring Bloom Project */
   color: #1f2933;
 
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   text-align: left;
   cursor: pointer;

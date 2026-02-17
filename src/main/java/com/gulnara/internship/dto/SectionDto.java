@@ -5,5 +5,6 @@ import java.util.UUID;
 /**
  * DTO representing a course section for API responses.
  */
-public record SectionDto(UUID id, String content) {
+public record SectionDto(UUID id, String title, String content) {
+
 }

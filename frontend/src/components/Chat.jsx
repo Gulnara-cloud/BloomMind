@@ -9,22 +9,26 @@ import ChatSidebar from "./ChatSidebar";
 
 export default function Chat() {
   const navigate = useNavigate();
-// ===== TEMP STEP 1 STATES (UI ONLY) =====
-const [sections] = useState([
-  { id: "22222222-0001-0000-0000-000000000001", title: "Week 1 - Java Fundamentals" },
-  { id: "22222222-0002-0000-0000-000000000002", title: "Week 2 - OOP in Java" },
-  { id: "22222222-0003-0000-0000-000000000003", title: "Week 3 - Collections Framework" },
-]);
+
+// Sections loaded from backend (DB)
+const [sections, setSections] = useState([]);
 
 const [activeSectionId, setActiveSectionId] = useState(null);
 const [sectionContent, setSectionContent] = useState(
   "### Select a section to see lecture notes"
 );
 
+  // Reset chat when switching section
 const handleSelectSection = (sectionId) => {
   if (!sectionId) return;
 
   setActiveSectionId(sectionId);
+
+  // Reset chat context when user changes learning topic
+  setActiveConversationId(null);
+  setMessages([]);
+  setPrompt("");
+
   setSectionContent("Loading...");
   loadSectionContent(sectionId);
 };
@@ -50,7 +54,6 @@ const courseId = "11111111-1111-1111-1111-111111111111";
       setSectionContent("## Failed to load lecture notes");
       return;
     }
-
     const data = await res.json();
     const raw = data.lectureNotes || data.content || "";
     const markdown = raw.replace(/\\n/g, "\n");
@@ -59,14 +62,45 @@ const courseId = "11111111-1111-1111-1111-111111111111";
     setSectionContent("## Network error while loading lecture notes");
   }
 };
+// Load sections list from backend (DB)
+const loadSections = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-  // сообщения в правой части
+    const courseId = "11111111-1111-1111-1111-111111111111";
+
+    const res = await fetch(
+      `http://localhost:8080/api/courses/${courseId}/sections`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      console.error("Failed to load sections", res.status);
+      return;
+    }
+
+    const data = await res.json();
+    setSections(data || []);
+  } catch (e) {
+    console.error("Error loading sections", e);
+  }
+};
+
+// Load sections once on page open
+useEffect(() => {
+  loadSections();
+}, []);
+
   const [messages, setMessages] = useState([]);
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
-
-  // новое – список диалогов для сайдбара
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
 
@@ -93,21 +127,27 @@ const courseId = "11111111-1111-1111-1111-111111111111";
      const data = await res.json();
      setConversations(data || []);
 
-     // если чатов нет — сбрасываем активный чат
-     if (!data || data.length === 0) {
-       setActiveConversationId(null);
-       setMessages([]);
-     }
-   } catch (e) {
-     console.error("Error loading conversations list", e);
-   }
- }, [activeSectionId]);
+          // Only reset if an active conversation exists AND it is not in the list for this section
+          const ids = (data || []).map((c) => c.id);
+          if (activeConversationId && !ids.includes(activeConversationId)) {
+            setActiveConversationId(null);
+            setMessages([]);
+          }
+
+          // If no conversations exist — reset chat
+          if (!data || data.length === 0) {
+            setActiveConversationId(null);
+            setMessages([]);
+          }
+        } catch (e) {
+          console.error("Error loading conversations list", e);
+        }
+      }, [activeSectionId, activeConversationId]);
 
  useEffect(() => {
    loadConversations();
  }, [loadConversations]);
 
-  // клик по существующему диалогу в сайдбаре
   const handleSelectConversation = async (id) => {
     setActiveConversationId(id);
     setMessages([]);
@@ -130,15 +170,27 @@ const courseId = "11111111-1111-1111-1111-111111111111";
         console.error("Failed to load conversation", res.status);
         return;
       }
-
-      const data = await res.json(); // ConversationDetailDto
+      const data = await res.json();
 
       const history =
-        (data.messages || []).map((m, index) => ({
-          id: m.id ?? index,
-          role: m.role.toLowerCase() === "user" ? "user" : "ai",
-          text: m.content,
-        })) || [];
+        (data.messages || []).map((m, index) => {
+          const role = m.role?.toLowerCase() === "user" ? "user" : "ai";
+
+          // Show only the real user input (strip system prompt wrapper)
+          let text = m.content || "";
+          if (role === "user") {
+            const marker = "User question:";
+            if (text.includes(marker)) {
+              text = text.split(marker).pop().trim();
+            }
+          }
+
+          return {
+            id: m.id ?? index,
+            role,
+            text,
+          };
+        }) || [];
 
       setMessages(history);
     } catch (e) {
@@ -146,20 +198,16 @@ const courseId = "11111111-1111-1111-1111-111111111111";
     }
   };
 
-  // кнопка "+ New chat" в сайдбаре
   const handleNewConversation = () => {
     setActiveConversationId(null);
     setMessages([]);
   };
 
-  // HandleSend
   const handleSend = async (e) => {
     e.preventDefault();
 
-    // 1) empty input guard
     if (!prompt.trim()) return;
 
-    // 2) section must be selected BEFORE adding user message
     if (!activeSectionId) {
       setMessages((prev) => [
         ...prev,
@@ -168,14 +216,12 @@ const courseId = "11111111-1111-1111-1111-111111111111";
       return;
     }
 
-    // 3) add user message only when section is selected
     const userMsg = { id: Date.now(), role: "user", text: prompt.trim() };
     setMessages((prev) => [...prev, userMsg]);
     setPrompt("");
     setLoading(true);
 
     try {
-      // 4) auth guard
       const token = localStorage.getItem("token");
       if (!token) {
         setMessages((prev) => [
@@ -186,7 +232,6 @@ const courseId = "11111111-1111-1111-1111-111111111111";
         return;
       }
 
-      // 5) (your existing logic below stays the same)
       const sectionTitle =
         sections.find((s) => s.id === activeSectionId)?.title || "Selected section";
 
@@ -222,20 +267,25 @@ const courseId = "11111111-1111-1111-1111-111111111111";
       if (response.ok) {
         const data = await response.json();
 
-        // если это был самый первый месседж, сохранить conversationId
-        if (!activeConversationId && data.conversationId) {
-          setActiveConversationId(data.conversationId);
-        }
+       // Use backend as the single source of truth to avoid duplicates
+             const convId = activeConversationId || data.conversationId;
 
-        // ответ ИИ
-        setMessages((prev) => [
-          ...prev,
-          { id: Date.now() + 1, role: "ai", text: data.response },
-        ]);
+             // If this was the first message, store new conversation id
+             if (convId && convId !== activeConversationId) {
+               setActiveConversationId(convId);
+             }
 
-        // обновить список диалогов слева
-        await loadConversations();
-      } else if (response.status === 401 || response.status === 403) {
+             // Refresh sidebar list
+             await loadConversations();
+
+             // Reload full conversation history from backend (prevents duplicate AI messages)
+             if (convId) {
+               await handleSelectConversation(convId);
+             }
+             return;
+           }
+
+       if (response.status === 401 || response.status === 403) {
         setMessages((prev) => [
           ...prev,
           {
@@ -246,7 +296,9 @@ const courseId = "11111111-1111-1111-1111-111111111111";
         ]);
         localStorage.removeItem("token");
         window.location.href = "/login";
-      } else {
+        return;
+      }
+
         const errorText = await response.text();
         setMessages((prev) => [
           ...prev,
@@ -256,7 +308,6 @@ const courseId = "11111111-1111-1111-1111-111111111111";
             text: errorText || "Error: AI not available right now.",
           },
         ]);
-      }
     } catch (err) {
       console.error("Network error:", err);
       setMessages((prev) => [
@@ -322,7 +373,7 @@ const courseId = "11111111-1111-1111-1111-111111111111";
           <div className="messages-container">
             {messages.length === 0 && (
               <div className="empty-chat">
-                Select a section and ask your first question 👇
+                Select a section and ask your first question 🔽
               </div>
             )}
             {messages

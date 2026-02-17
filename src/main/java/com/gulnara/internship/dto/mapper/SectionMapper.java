@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Mapper for converting Section entities to SectionDto
+ * Mapper for converting Section entities to SectionDto.
  */
 public final class SectionMapper {
 
@@ -21,9 +21,10 @@ public final class SectionMapper {
         }
         return new SectionDto(
                 section.getId(),
-                section.getContent()
-        );
+                section.getTitle(),
+                section.getContent());
     }
+
     public static List<SectionDto> toDtoList(List<Section> sections) {
         return sections.stream()
                 .map(SectionMapper::toDto)

@@ -42,7 +42,7 @@ body {
   box-sizing: border-box;
   min-width: 0;
 
-  line-height: 1.3;
+  line-height: 1.2;
   font-size: 14px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
@@ -60,7 +60,7 @@ body {
   align-self: flex-start;
   background: #f5f2fa; /* very soft lavender-gray tone */
   color: #333;
-  border: 0px solid #e6def5; /* subtle lavender edge */
+  border: 0.1px solid #e6def5; /* subtle lavender edge */
   border-top-left-radius: 2px;
 }
 
@@ -70,7 +70,7 @@ body {
   background: #D9F1FF; /* baby blue */
   color: #333; /* dark grey text */
   border-top-right-radius: 2px;
-  border: 0px solid #e0e0e0; /*soft frame*/
+  border: 0.1px solid #e0e0e0; /*soft frame*/
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 /* Input section */
@@ -79,17 +79,17 @@ body {
   background: #ffffff;
   width: 100%;
   gap: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #eee;
+  padding-top: 5px;
+  border-top: 0px solid #eee;
 }
 .input-row input {
   flex: 1;
   padding: 14px 14px;
   border-radius: 10px;
-  border: 1px solid #ddd1eb; /* soft lavender border */
+  border: 2px solid #ddd1eb; /* soft lavender border */
   outline: none;
   background: #ffffff;
-  font-size: 15px;
+  font-size: 14px;
   transition: border 0.3s ease, box-shadow 0.3s ease;
 }
 .input-row input:focus {
@@ -159,7 +159,7 @@ body {
   width: 240px;
   background: #ffffff;
   border-radius: 16px;
-  padding: 5px;
+  padding: 3px;
   box-shadow: 0 6px 24px rgba(180, 180, 210, 0.07);
   display: flex;
   flex-direction: column;
@@ -167,19 +167,19 @@ body {
 }
 .sections-title {
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 25px;
   opacity: 0.8;
 }
 .sections-list {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   overflow: auto;
   padding-right: 10px;
 }
 .section-item {
   text-align: left;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.06);
   background: #f7f8fb;
