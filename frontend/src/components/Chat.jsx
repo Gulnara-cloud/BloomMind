@@ -1,6 +1,12 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 import "./Chat.css";
 import { useNavigate } from "react-router-dom";
 import SectionSidebar from "./SectionSidebar";
@@ -10,143 +16,149 @@ import ChatSidebar from "./ChatSidebar";
 export default function Chat() {
   const navigate = useNavigate();
 
-// Sections loaded from backend (DB)
-const [sections, setSections] = useState([]);
+  // Sections loaded from backend (DB)
+  const [sections, setSections] = useState([]);
 
-const [activeSectionId, setActiveSectionId] = useState(null);
-const [sectionContent, setSectionContent] = useState(
-  "### Select a section to see lecture notes"
-);
+  const [activeSectionId, setActiveSectionId] = useState(null);
+  const [sectionContent, setSectionContent] = useState(
+    "### Select a section to see lecture notes"
+  );
 
   // Reset chat when switching section
-const handleSelectSection = (sectionId) => {
-  if (!sectionId) return;
+  const handleSelectSection = (sectionId) => {
+    if (!sectionId) return;
 
-  setActiveSectionId(sectionId);
+    setActiveSectionId(sectionId);
 
-  // Reset chat context when user changes learning topic
-  setActiveConversationId(null);
-  setMessages([]);
-  setPrompt("");
+    // Reset chat context when user changes learning topic
+    setActiveConversationId(null);
+    setMessages([]);
+    setPrompt("");
 
-  setSectionContent("Loading...");
-  loadSectionContent(sectionId);
-};
+    setSectionContent("Loading...");
+    loadSectionContent(sectionId);
+  };
 
-const loadSectionContent = async (sectionId) => {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-
-const courseId = "11111111-1111-1111-1111-111111111111";
-
-  try {
-    const res = await fetch(
-      `http://localhost:8080/api/courses/${courseId}/sections/${sectionId}`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!res.ok) {
-      setSectionContent("## Failed to load lecture notes");
-      return;
-    }
-    const data = await res.json();
-    const raw = data.lectureNotes || data.content || "";
-    const markdown = raw.replace(/\\n/g, "\n");
-    setSectionContent(markdown || "## No lecture notes yet");
-  } catch (e) {
-    setSectionContent("## Network error while loading lecture notes");
-  }
-};
-// Load sections list from backend (DB)
-const loadSections = async () => {
-  try {
+  const loadSectionContent = async (sectionId) => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
     const courseId = "11111111-1111-1111-1111-111111111111";
 
-    const res = await fetch(
-      `http://localhost:8080/api/courses/${courseId}/sections`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/courses/${courseId}/sections/${sectionId}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        setSectionContent("## Failed to load lecture notes");
+        return;
       }
-    );
-
-    if (!res.ok) {
-      console.error("Failed to load sections", res.status);
-      return;
+      const data = await res.json();
+      const raw = data.lectureNotes || data.content || "";
+      const markdown = raw.replace(/\\n/g, "\n");
+      setSectionContent(markdown || "## No lecture notes yet");
+    } catch (e) {
+      setSectionContent("## Network error while loading lecture notes");
     }
+  };
 
-    const data = await res.json();
-    setSections(data || []);
-  } catch (e) {
-    console.error("Error loading sections", e);
-  }
-};
+  // Load sections list from backend (DB)
+  const loadSections = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-// Load sections once on page open
-useEffect(() => {
-  loadSections();
-}, []);
+      const courseId = "11111111-1111-1111-1111-111111111111";
+
+      const res = await fetch(
+        `http://localhost:8080/api/courses/${courseId}/sections`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        console.error("Failed to load sections", res.status);
+        return;
+      }
+
+      const data = await res.json();
+      setSections(data || []);
+    } catch (e) {
+      console.error("Error loading sections", e);
+    }
+  };
+
+  // Load sections once on page open
+  useEffect(() => {
+    loadSections();
+  }, []);
 
   const [messages, setMessages] = useState([]);
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
+
   const scrollRef = useRef(null);
+
+  // NEW: ref to the actual scrollable container
+  const messagesContainerRef = useRef(null);
+
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
 
- const loadConversations = useCallback(async () => {
-   const token = localStorage.getItem("token");
-   if (!token || !activeSectionId) return;
+  const loadConversations = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token || !activeSectionId) return;
 
-   try {
-     const res = await fetch(
-       `http://localhost:8080/api/chat/conversations?sectionId=${activeSectionId}`,
-       {
-         headers: {
-           "Content-Type": "application/json",
-           Authorization: `Bearer ${token}`,
-         },
-       }
-     );
-
-     if (!res.ok) {
-       console.error("Failed to load conversations list", res.status);
-       return;
-     }
-
-     const data = await res.json();
-     setConversations(data || []);
-
-          // Only reset if an active conversation exists AND it is not in the list for this section
-          const ids = (data || []).map((c) => c.id);
-          if (activeConversationId && !ids.includes(activeConversationId)) {
-            setActiveConversationId(null);
-            setMessages([]);
-          }
-
-          // If no conversations exist — reset chat
-          if (!data || data.length === 0) {
-            setActiveConversationId(null);
-            setMessages([]);
-          }
-        } catch (e) {
-          console.error("Error loading conversations list", e);
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/chat/conversations?sectionId=${activeSectionId}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         }
-      }, [activeSectionId, activeConversationId]);
+      );
 
- useEffect(() => {
-   loadConversations();
- }, [loadConversations]);
+      if (!res.ok) {
+        console.error("Failed to load conversations list", res.status);
+        return;
+      }
+
+      const data = await res.json();
+      setConversations(data || []);
+
+      // Only reset if an active conversation exists AND it is not in the list for this section
+      const ids = (data || []).map((c) => c.id);
+      if (activeConversationId && !ids.includes(activeConversationId)) {
+        setActiveConversationId(null);
+        setMessages([]);
+      }
+
+      // If no conversations exist — reset chat
+      if (!data || data.length === 0) {
+        setActiveConversationId(null);
+        setMessages([]);
+      }
+    } catch (e) {
+      console.error("Error loading conversations list", e);
+    }
+  }, [activeSectionId, activeConversationId]);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
 
   const handleSelectConversation = async (id) => {
     setActiveConversationId(id);
@@ -203,6 +215,17 @@ useEffect(() => {
     setMessages([]);
   };
 
+  // NEW: always scroll the messages container to the bottom AFTER render
+  const scrollToBottom = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, []);
+
+  useLayoutEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
   const handleSend = async (e) => {
     e.preventDefault();
 
@@ -233,7 +256,8 @@ useEffect(() => {
       }
 
       const sectionTitle =
-        sections.find((s) => s.id === activeSectionId)?.title || "Selected section";
+        sections.find((s) => s.id === activeSectionId)?.title ||
+        "Selected section";
 
       const hasUsefulNotes =
         sectionContent &&
@@ -248,44 +272,41 @@ useEffect(() => {
         ? `You are my tutor. We are working on this section: "${sectionTitle}".\n\nLecture notes:\n${notesForPrompt}\n\nUser question:\n${userMsg.text}`
         : `You are my tutor. We are working on this section: "${sectionTitle}".\n\nUser question:\n${userMsg.text}`;
 
-      const response = await fetch(
-        "http://localhost:8080/api/chat/message",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            message: messageToSend,
-            conversationId: activeConversationId,
-            sectionId: activeSectionId,
-          }),
-        }
-      );
+      const response = await fetch("http://localhost:8080/api/chat/message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          message: messageToSend,
+          conversationId: activeConversationId,
+          sectionId: activeSectionId,
+        }),
+      });
 
       if (response.ok) {
         const data = await response.json();
 
-       // Use backend as the single source of truth to avoid duplicates
-             const convId = activeConversationId || data.conversationId;
+        // Use backend as the single source of truth to avoid duplicates
+        const convId = activeConversationId || data.conversationId;
 
-             // If this was the first message, store new conversation id
-             if (convId && convId !== activeConversationId) {
-               setActiveConversationId(convId);
-             }
+        // If this was the first message, store new conversation id
+        if (convId && convId !== activeConversationId) {
+          setActiveConversationId(convId);
+        }
 
-             // Refresh sidebar list
-             await loadConversations();
+        // Refresh sidebar list
+        await loadConversations();
 
-             // Reload full conversation history from backend (prevents duplicate AI messages)
-             if (convId) {
-               await handleSelectConversation(convId);
-             }
-             return;
-           }
+        // Reload full conversation history from backend (prevents duplicate AI messages)
+        if (convId) {
+          await handleSelectConversation(convId);
+        }
+        return;
+      }
 
-       if (response.status === 401 || response.status === 403) {
+      if (response.status === 401 || response.status === 403) {
         setMessages((prev) => [
           ...prev,
           {
@@ -299,15 +320,15 @@ useEffect(() => {
         return;
       }
 
-        const errorText = await response.text();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now() + 1,
-            role: "ai",
-            text: errorText || "Error: AI not available right now.",
-          },
-        ]);
+      const errorText = await response.text();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          role: "ai",
+          text: errorText || "Error: AI not available right now.",
+        },
+      ]);
     } catch (err) {
       console.error("Network error:", err);
       setMessages((prev) => [
@@ -320,9 +341,6 @@ useEffect(() => {
       ]);
     } finally {
       setLoading(false);
-      if (scrollRef.current) {
-        scrollRef.current.scrollIntoView({ behavior: "smooth" });
-      }
     }
   };
 
@@ -340,7 +358,7 @@ useEffect(() => {
       {/* CENTER: lecture markdown */}
       <div className="panel center">
         <header className="topbar">
-          <div className="title">Spring Bloom Project</div>
+          <div className="title">BloomMind Project</div>
           <button
             className="logout-btn"
             onClick={() => {
@@ -358,11 +376,11 @@ useEffect(() => {
       <div className="panel conversations-panel">
         <div style={{ padding: "12px", fontWeight: 600 }}>Conversations</div>
         <ChatSidebar
-                  conversations={conversations}
-                  activeConversationId={activeConversationId}
-                  onSelectConversation={handleSelectConversation}
-                  onNewConversation={handleNewConversation}
-                />
+          conversations={conversations}
+          activeConversationId={activeConversationId}
+          onSelectConversation={handleSelectConversation}
+          onNewConversation={handleNewConversation}
+        />
       </div>
 
       {/* RIGHT: chat */}
@@ -370,14 +388,15 @@ useEffect(() => {
         <h2 className="chat-title">AI Assistant</h2>
 
         <div className="chat-container">
-          <div className="messages-container">
+          {/* CHANGED: attach ref to the actual scroll container */}
+          <div className="messages-container" ref={messagesContainerRef}>
             {messages.length === 0 && (
               <div className="empty-chat">
                 Select a section and ask your first question 🔽
               </div>
             )}
             {messages
-              .filter(msg => {
+              .filter((msg) => {
                 const t = (msg.text || "").trimStart();
                 return !(
                   t.startsWith("You are my tutor.") ||
@@ -387,7 +406,7 @@ useEffect(() => {
               .map((msg, i) => (
                 <div key={i} className={`message ${msg.role}`}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {msg.text}
+                    {msg.text.replace(/(\d+)\.\n+/g, "$1. ")}
                   </ReactMarkdown>
                 </div>
               ))}
@@ -402,7 +421,10 @@ useEffect(() => {
               onChange={(e) => setPrompt(e.target.value)}
               disabled={loading || !activeSectionId}
             />
-            <button type="submit" disabled={loading || !activeSectionId || !prompt.trim()}>
+            <button
+              type="submit"
+              disabled={loading || !activeSectionId || !prompt.trim()}
+            >
               {loading ? "..." : "Send"}
             </button>
           </form>
