@@ -24,4 +24,7 @@ public class Section {
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
+
+    @OneToOne(mappedBy = "section", fetch = FetchType.LAZY)
+    private LectureContent lectureContent;
 }

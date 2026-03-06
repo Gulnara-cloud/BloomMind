@@ -23,9 +23,7 @@ public class SectionServiceImpl implements SectionService {
 
     @Override
     public Section getSectionByIdForCourse(UUID courseId, UUID sectionId) {
-        return sectionRepository.findById(sectionId)
-                .filter(section -> section.getCourse() != null &&
-                        section.getCourse().getId().equals(courseId))
+        return sectionRepository.findByIdForCourseWithLecture(courseId, sectionId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Section not found for course: " + courseId + ", section: " + sectionId
                 ));
