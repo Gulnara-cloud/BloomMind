@@ -271,9 +271,43 @@ export default function Chat() {
 
       const notesForPrompt = hasUsefulNotes ? sectionContent : "";
 
+      const formattingRules = `
+      Formatting rules:
+      - Use Markdown formatting.
+      - Use **bold** for important terms.
+      - When writing numbered lists, keep the number and text on the same line.
+
+      Correct example:
+
+      1. **Factory (Creational)** - Centralizes object creation.
+      2. **Singleton (Creational)** - Ensures a single instance.
+      3. **Adapter (Structural)** - Allows incompatible interfaces to work together.
+      4. **Strategy (Behavioral)** - Allows switching behavior dynamically.
+
+      Never write:
+      1.
+      **Factory (Creational)**
+      `;
       const messageToSend = notesForPrompt
-        ? `You are my tutor. We are working on this section: "${sectionTitle}".\n\nLecture notes:\n${notesForPrompt}\n\nUser question:\n${userMsg.text}`
-        : `You are my tutor. We are working on this section: "${sectionTitle}".\n\nUser question:\n${userMsg.text}`;
+        ? `You are my programming tutor helping me learn backend development.
+
+      We are working on this section: "${sectionTitle}".
+
+      ${formattingRules}
+
+      Lecture notes:
+      ${notesForPrompt}
+
+      User question:
+      ${userMsg.text}`
+        : `You are my programming tutor helping me learn backend development.
+
+      We are working on this section: "${sectionTitle}".
+
+      ${formattingRules}
+
+      User question:
+      ${userMsg.text}`;
 
       const response = await fetch("http://localhost:8080/api/chat/message", {
         method: "POST",
