@@ -126,7 +126,7 @@ body {
   transform: translateY(-1px);
 }
 /* === Chat Header (top bar) === */
-.chat-header {
+.topbar {
   display: flex;
   justify-content: space-between; /* название слева, кнопка справа */
   align-items: center;
@@ -139,16 +139,16 @@ body {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
-.chat-header h2 {
-  font-weight: 700;
-  font-size: 17px;
+.topbar .title {
+  font-weight: 800;
+  font-size: 18px;
   margin: 0;
 }
 .logout-btn {
   background-color: #f8fafc; /* мягкий светлый фон */
   color: #333;
   border: 1px solid #cdd5dc; /* лёгкая рамка в тон заголовку */
-  border-radius: 25px;
+  border-radius: 20px;
   padding: 8px 18px;
   font-weight: 600;
   cursor: pointer;
@@ -203,7 +203,9 @@ body {
   font-size: 14px;
 }
 .section-item:hover {
-  background: #eef1f7;
+  background: #eef3f8;
+  transform: translateX(2px);
+  transition: all 0.15s ease;
 }
 .section-item.active {
   background: #dbe7f3;
@@ -250,13 +252,17 @@ body {
   opacity: 0.85;
 }
 /* CENTER */
-.center-panel {
+.panel.center {
   flex: 1;
   padding: 16px;
   display: flex;
   flex-direction: column;
-  min-height: 0;     /* важно */
-  overflow-y: auto;  /* скролл лекций */
+  min-height: 0;
+}
+.lecture-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 .top-bar {
   display: flex;
@@ -298,8 +304,8 @@ body {
   display: grid;
   grid-template-columns: 260px 1fr 300px 420px; /* left center right */
   height: 100vh;
-  gap: 5px;
-  padding: 16px;
+  gap: 10px;
+  padding: 10px;
   box-sizing: border-box;
   background: #f8f6f3;
 }
@@ -337,4 +343,37 @@ body {
   opacity: 0.8;
   pointer-events: none;
 }
+/* Lecture markdown styles */
 
+.section-content h1{
+  font-size: 20px;
+  font-weight: 730;
+  margin-bottom: 16px;
+}
+
+.section-content h2 {
+  font-size: 16px;
+  font-weight: 750;
+  margin-top: 18px;
+  margin-bottom: 10px;
+}
+
+.section-content h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 16px;
+}
+
+.section-content p {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.section-content li {
+  font-size: 15px;
+  margin-left: 18px;
+}
+
+.section-content {
+  max-width: 720px;
+}

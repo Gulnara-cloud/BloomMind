@@ -61,7 +61,10 @@ export default function Chat() {
         return;
       }
       const data = await res.json();
-      const raw = data.lectureNotes || data.content || "";
+
+      const title = data.lectureTitle ? `# ${data.lectureTitle}\n\n` : "";
+      const raw = title + (data.lectureContent || "");
+
       const markdown = raw.replace(/\\n/g, "\n");
       setSectionContent(markdown || "## No lecture notes yet");
     } catch (e) {
@@ -358,18 +361,15 @@ export default function Chat() {
       {/* CENTER: lecture markdown */}
       <div className="panel center">
         <header className="topbar">
-          <div className="title">BloomMind Project</div>
-          <button
-            className="logout-btn"
-            onClick={() => {
-              localStorage.removeItem("token");
-              navigate("/login");
-            }}
-          >
+          <div className="title">BloomMind</div>
+          <button className="logout-btn" onClick={() => { localStorage.removeItem("token"); navigate("/login"); }}>
             Logout
           </button>
         </header>
-        <SectionContent content={sectionContent} />
+
+        <div className="lecture-scroll">
+          <SectionContent content={sectionContent} />
+        </div>
       </div>
 
       {/* CONVERSATIONS PANEL */}
