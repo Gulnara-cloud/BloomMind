@@ -12,13 +12,13 @@ import java.util.Arrays;
 @Configuration
 public class CorsConfig {
 
-    @Value("${app.cors.allowed-origins}")
+    @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
 
-    @Value("${app.cors.allowed-methods}")
+    @Value("${app.cors.allowed-methods:GET,POST,PUT,DELETE,OPTIONS}")
     private String allowedMethods;
 
-    @Value("${app.cors.allowed-headers}")
+    @Value("${app.cors.allowed-headers:*}")
     private String allowedHeaders;
 
     @Bean
