@@ -13,6 +13,8 @@ import SectionSidebar from "./SectionSidebar";
 import SectionContent from "./SectionContent";
 import ChatSidebar from "./ChatSidebar";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 export default function Chat() {
   const navigate = useNavigate();
 
@@ -47,7 +49,7 @@ export default function Chat() {
 
     try {
       const res = await fetch(
-        `http://localhost:8080/api/courses/${courseId}/sections/${sectionId}`,
+        `https://internproject-backend-52635102117.us-west1.run.app/api/courses/${courseId}/sections/${sectionId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -81,7 +83,7 @@ export default function Chat() {
       const courseId = "11111111-1111-1111-1111-111111111111";
 
       const res = await fetch(
-        `http://localhost:8080/api/courses/${courseId}/sections`,
+        `https://internproject-backend-52635102117.us-west1.run.app/api/courses/${courseId}/sections`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -125,7 +127,7 @@ export default function Chat() {
 
     try {
       const res = await fetch(
-        `http://localhost:8080/api/chat/conversations?sectionId=${activeSectionId}`,
+        `https://internproject-backend-52635102117.us-west1.run.app/api/chat/conversations?sectionId=${activeSectionId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -172,7 +174,7 @@ export default function Chat() {
 
     try {
       const res = await fetch(
-        `http://localhost:8080/api/chat/conversations/${id}`,
+       `https://internproject-backend-52635102117.us-west1.run.app/api/chat/conversations/${id}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -309,7 +311,7 @@ export default function Chat() {
       User question:
       ${userMsg.text}`;
 
-      const response = await fetch("http://localhost:8080/api/chat/message", {
+      const response = await fetch(`${API_BASE_URL}/api/chat/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
