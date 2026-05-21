@@ -1,6 +1,6 @@
 # BloomMind
 
-BloomMind is an AI-powered learning platform designed to support interactive education experiences with persistent conversation history and secure user authentication.
+BloomMind is an AI-powered full-stack learning platform designed to support interactive education experiences with persistent conversation history and secure user authentication.
 
 The system provides scalable backend architecture with JWT-based security, structured data persistence, and AI-assisted chat functionality.
 
