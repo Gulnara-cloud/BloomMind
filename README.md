@@ -10,7 +10,7 @@ The system provides scalable backend architecture with JWT-based security, struc
 
 - Secure user registration and authentication (JWT-based)
 - Encrypted password storage
-- AI-powered chat integration (Gemini API)
+- AI-powered chat integration (OpenAI API)
 - Persistent conversations and message history (PostgreSQL)
 - Role-based request handling with Spring Security
 - RESTful API design
